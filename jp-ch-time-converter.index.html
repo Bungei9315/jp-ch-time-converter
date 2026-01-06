@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>日本 ⇄ スイス 時刻変換ツール</title>
+  <style>
+    :root{
+      --bg:#0b0f19;
+      --text:#eaf0ff;
+      --muted:#a9b6d6;
+      --accent:#7aa2ff;
+      --good:#74f0b8;
+      --warn:#ffd479;
+      --bad:#ff7a7a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+      font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif;
+      background: radial-gradient(1200px 600px at 50% 20%, #182244 0%, var(--bg) 60%);
+      color:var(--text);
+    }
+    .wrap{ width:min(980px, 94vw); padding:18px; }
+    header{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:14px; }
+    h1{ font-size:18px; margin:0; letter-spacing:.02em; }
+    .sub{ font-size:12px; color:var(--muted); }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media (max-width:720px){ .grid{grid-template-columns:1fr} }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      padding:16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .city{ font-size:14px; color:var(--muted); display:flex; gap:8px; align-items:center; }
+    .badge{
+      font-size:11px; padding:4px 8px; border-radius:999px;
+      background: rgba(122,162,255,.15);
+      border:1px solid rgba(122,162,255,.35);
+      color: var(--accent);
+      white-space:nowrap;
+    }
+    .time{
+      font-size:38px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing:.02em;
+      line-height:1.1;
+    }
+    .row{ margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,.08); display:flex; gap:12px; flex-wrap:wrap; }
+    .field{
+      display:grid;
+      gap:6px;
+      min-width: 200px;
+      flex:1;
+    }
+    label{ font-size:12px; color:var(--muted); }
+    input[type="date"], input[type="time"], input[type="text"]{
+      width:100%;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      outline:none;
+      font-size:14px;
+    }
+    input[type="time"]{ font-variant-numeric: tabular-nums; }
+    .mini{
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .mini strong{ color:var(--text); font-weight:600; }
+    .bar{
+      margin-top:14px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    button{
+      cursor:pointer;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      color:var(--text);
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:13px;
+    }
+    button:hover{background: rgba(255,255,255,.10)}
+    .note{
+      margin-top:12px;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.6;
+    }
+    .pill{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .pill.good{ border-color: rgba(116,240,184,.35); color: var(--good); }
+    .pill.warn{ border-color: rgba(255,212,121,.40); color: var(--warn); }
+    .pill.bad{ border-color: rgba(255,122,122,.45); color: var(--bad); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>日本 ⇄ スイス 時刻変換ツール</h1>
+      <div class="sub">片方の日時を入力すると、相手側が自動で変換（DST自動）</div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <div class="top">
+          <div class="city">🇯🇵 日本（Tokyo） <span class="badge" id="abbrJP">—</span></div>
+          <span class="badge" id="offJP">—</span>
+        </div>
+        <div class="time" id="nowJP">--:--:--</div>
+
+        <div class="row">
+          <div class="field">
+            <label for="dateJP">日付（日本）</label>
+            <input id="dateJP" type="date" />
+          </div>
+          <div class="field">
+            <label for="timeJP">時刻（日本）</label>
+            <input id="timeJP" type="time" step="60" />
+          </div>
+        </div>
+
+        <div class="mini">
+          <div>入力→変換対象：<strong>スイス</strong></div>
+          <div>曜日：<strong id="dowJP">—</strong></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="top">
+          <div class="city">🇨🇭 スイス（Zurich） <span class="badge" id="abbrCH">—</span></div>
+          <span class="badge" id="offCH">—</span>
+        </div>
+        <div class="time" id="nowCH">--:--:--</div>
+
+        <div class="row">
+          <div class="field">
+            <label for="dateCH">日付（スイス）</label>
+            <input id="dateCH" type="date" />
+          </div>
+          <div class="field">
+            <label for="timeCH">時刻（スイス）</label>
+            <input id="timeCH" type="time" step="60" />
+          </div>
+        </div>
+
+        <div class="mini">
+          <div>入力→変換対象：<strong>日本</strong></div>
+          <div>曜日：<strong id="dowCH">—</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bar">
+      <button id="btnSetNowJP" type="button">日本を「今」にセット</button>
+      <button id="btnSetNowCH" type="button">スイスを「今」にセット</button>
+      <button id="btnLinkNow" type="button">両方「今」に同期</button>
+      <span class="pill" id="diffPill">時差: —</span>
+      <span class="pill warn" id="dstPill" title="サマータイムは自動反映されます">DST: 自動</span>
+      <span class="pill" id="statusPill">状態: —</span>
+    </div>
+
+    <div class="note">
+      ・日付は <strong>2026-01-06</strong> / <strong>2026/01/06</strong> / <strong>2026.01.06</strong> のどれでもOK（内部で自動正規化）<br/>
+      ・片方を編集すると、もう片方が更新されます（ループ防止＋例外でも復帰）<br/>
+      ・日付をまたぐ変換（前日/翌日）も自動で反映します
+    </div>
+  </div>
+
+<script>
+(() => {
+  const TZ_JP = "Asia/Tokyo";
+  const TZ_CH = "Europe/Zurich";
+
+  const el = (id)=>document.getElementById(id);
+
+  function setStatus(text, kind="good"){
+    const p = el("statusPill");
+    p.textContent = `状態: ${text}`;
+    p.classList.remove("good","warn","bad");
+    p.classList.add(kind);
+  }
+
+  // --- オフセット計算（shortOffset未対応でも動くフォールバック付き） ---
+  function tryOffsetFromTimeZoneName(date, timeZone, timeZoneNameValue){
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      timeZoneName: timeZoneNameValue,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    }).formatToParts(date);
+
+    const tzPart = parts.find(p => p.type === "timeZoneName")?.value || "";
+    const m = tzPart.match(/(GMT|UTC)([+-])(\d{1,2})(?::?(\d{2}))?/);
+    if(!m) return null;
+    const sign = m[2] === "+" ? 1 : -1;
+    const hh = parseInt(m[3],10);
+    const mm = m[4] ? parseInt(m[4],10) : 0;
+    return sign * (hh*60 + mm);
+  }
+
+  function offsetByLocaleStringTrick(date, timeZone){
+    const s = date.toLocaleString("en-US", {
+      timeZone,
+      year:"numeric", month:"2-digit", day:"2-digit",
+      hour:"2-digit", minute:"2-digit", second:"2-digit",
+      hour12:false
+    });
+    const asLocal = new Date(s);
+    const localOffset = -date.getTimezoneOffset();
+    const diffMinutes = Math.round((asLocal.getTime() - date.getTime()) / 60000);
+    const targetOffset = localOffset - diffMinutes;
+    return targetOffset;
+  }
+
+  function getOffsetMinutes(date, timeZone){
+    try{
+      const v1 = tryOffsetFromTimeZoneName(date, timeZone, "shortOffset");
+      if(v1 !== null) return v1;
+    }catch(e){}
+    try{
+      const v2 = tryOffsetFromTimeZoneName(date, timeZone, "longOffset");
+      if(v2 !== null) return v2;
+    }catch(e){}
+    return offsetByLocaleStringTrick(date, timeZone);
+  }
+
+  function fmtOffset(mins){
+    const sign = mins >= 0 ? "+" : "-";
+    const abs = Math.abs(mins);
+    const hh = String(Math.floor(abs/60)).padStart(2,"0");
+    const mm = String(abs%60).padStart(2,"0");
+    return `UTC${sign}${hh}:${mm}`;
+  }
+
+  function getAbbr(date, timeZone){
+    try{
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        timeZoneName: "short",
+        hour: "2-digit"
+      }).formatToParts(date);
+      return parts.find(p => p.type === "timeZoneName")?.value || "—";
+    }catch{
+      return "—";
+    }
+  }
+
+  // ★ここが今回の肝：日付の正規化（YYYY-MM-DD に寄せる）
+  function normalizeDateString(s){
+    if(!s) return "";
+    const t = String(s).trim().replace(/[./]/g, "-");
+    // 2026-1-6 みたいなのも許可して 2026-01-06 に整形
+    const m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if(!m) return "";
+    const Y = m[1];
+    const M = String(parseInt(m[2],10)).padStart(2,"0");
+    const D = String(parseInt(m[3],10)).padStart(2,"0");
+    return `${Y}-${M}-${D}`;
+  }
+
+  function normalizeTimeString(s){
+    if(!s) return "";
+    const t = String(s).trim();
+    // HH:MM だけ使う（秒は切り捨て）
+    const m = t.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if(!m) return "";
+    const hh = String(parseInt(m[1],10)).padStart(2,"0");
+    const mm = m[2];
+    return `${hh}:${mm}`;
+  }
+
+  function getLocalParts(date, timeZone){
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    }).formatToParts(date);
+
+    const map = Object.fromEntries(parts.map(p => [p.type, p.value]));
+    return { date: `${map.year}-${map.month}-${map.day}`, time: `${map.hour}:${map.minute}` };
+  }
+
+  function zonedLocalToUTCDate(ymd, hm, timeZone){
+    const dateNorm = normalizeDateString(ymd);
+    const timeNorm = normalizeTimeString(hm);
+    if(!dateNorm || !timeNorm) return null;
+
+    const [Y,M,D] = dateNorm.split("-").map(Number);
+    const [h,mi] = timeNorm.split(":").map(Number);
+
+    const naiveUtc = new Date(Date.UTC(Y, M-1, D, h, mi, 0));
+    const off = getOffsetMinutes(naiveUtc, timeZone);
+    let utc = new Date(naiveUtc.getTime() - off*60*1000);
+
+    const off2 = getOffsetMinutes(utc, timeZone);
+    utc = new Date(naiveUtc.getTime() - off2*60*1000);
+
+    return utc;
+  }
+
+  function dowJa(date, timeZone){
+    return new Intl.DateTimeFormat("ja-JP", { timeZone, weekday:"long" }).format(date);
+  }
+
+  const dateJP = el("dateJP");
+  const timeJP = el("timeJP");
+  const dateCH = el("dateCH");
+  const timeCH = el("timeCH");
+
+  let suppress = false;
+
+  function updateBadgesAndNow(){
+    const now = new Date();
+
+    el("nowJP").textContent = new Intl.DateTimeFormat("ja-JP", { timeZone: TZ_JP, hour:"2-digit", minute:"2-digit", second:"2-digit" }).format(now);
+    el("nowCH").textContent = new Intl.DateTimeFormat("ja-JP", { timeZone: TZ_CH, hour:"2-digit", minute:"2-digit", second:"2-digit" }).format(now);
+
+    const offJ = getOffsetMinutes(now, TZ_JP);
+    const offC = getOffsetMinutes(now, TZ_CH);
+
+    el("offJP").textContent = fmtOffset(offJ);
+    el("offCH").textContent = fmtOffset(offC);
+    el("abbrJP").textContent = getAbbr(now, TZ_JP);
+    el("abbrCH").textContent = getAbbr(now, TZ_CH);
+
+    const diff = offJ - offC;
+    const sign = diff >= 0 ? "+" : "-";
+    const abs = Math.abs(diff);
+    const hh = Math.floor(abs/60);
+    const mm = abs%60;
+
+    el("diffPill").textContent = `時差: 日本 = スイス ${sign}${hh}h${mm?(" "+mm+"m"):""}`;
+    el("diffPill").classList.add("good");
+  }
+
+  function setInputsFromNow(){
+    const now = new Date();
+    const jp = getLocalParts(now, TZ_JP);
+    const ch = getLocalParts(now, TZ_CH);
+
+    suppress = true;
+    dateJP.value = jp.date; timeJP.value = jp.time;
+    dateCH.value = ch.date; timeCH.value = ch.time;
+    el("dowJP").textContent = dowJa(now, TZ_JP);
+    el("dowCH").textContent = dowJa(now, TZ_CH);
+    suppress = false;
+    setStatus("初期化OK", "good");
+  }
+
+  function convertFromJP(){
+    if(suppress) return;
+    const ymd = normalizeDateString(dateJP.value);
+    const hm  = normalizeTimeString(timeJP.value);
+    if(!ymd || !hm){
+      setStatus("日本側の入力が不正（例: 2026-01-06 / 18:30）", "warn");
+      return;
+    }
+
+    const prevSuppress = suppress;
+    suppress = true;
+    try{
+      const utc = zonedLocalToUTCDate(ymd, hm, TZ_JP);
+      if(!utc){
+        setStatus("日本→スイス変換に失敗", "bad");
+        return;
+      }
+      const ch = getLocalParts(utc, TZ_CH);
+      dateCH.value = ch.date;
+      timeCH.value = ch.time;
+      el("dowJP").textContent = dowJa(utc, TZ_JP);
+      el("dowCH").textContent = dowJa(utc, TZ_CH);
+      setStatus("日本→スイス 変換OK", "good");
+    }catch(e){
+      setStatus("日本→スイス 例外発生（コンソール確認）", "bad");
+      console.error(e);
+    }finally{
+      suppress = prevSuppress;
+    }
+  }
+
+  function convertFromCH(){
+    if(suppress) return;
+    const ymd = normalizeDateString(dateCH.value);
+    const hm  = normalizeTimeString(timeCH.value);
+    if(!ymd || !hm){
+      setStatus("スイス側の入力が不正（例: 2026-01-06 / 10:30）", "warn");
+      return;
+    }
+
+    const prevSuppress = suppress;
+    suppress = true;
+    try{
+      const utc = zonedLocalToUTCDate(ymd, hm, TZ_CH);
+      if(!utc){
+        setStatus("スイス→日本変換に失敗", "bad");
+        return;
+      }
+      const jp = getLocalParts(utc, TZ_JP);
+      dateJP.value = jp.date;
+      timeJP.value = jp.time;
+      el("dowJP").textContent = dowJa(utc, TZ_JP);
+      el("dowCH").textContent = dowJa(utc, TZ_CH);
+      setStatus("スイス→日本 変換OK", "good");
+    }catch(e){
+      setStatus("スイス→日本 例外発生（コンソール確認）", "bad");
+      console.error(e);
+    }finally{
+      suppress = prevSuppress;
+    }
+  }
+
+  // ボタン
+  el("btnSetNowJP").addEventListener("click", ()=>{
+    const now = new Date();
+    const jp = getLocalParts(now, TZ_JP);
+    suppress = true;
+    dateJP.value = jp.date;
+    timeJP.value = jp.time;
+    suppress = false;
+    convertFromJP();
+  });
+
+  el("btnSetNowCH").addEventListener("click", ()=>{
+    const now = new Date();
+    const ch = getLocalParts(now, TZ_CH);
+    suppress = true;
+    dateCH.value = ch.date;
+    timeCH.value = ch.time;
+    suppress = false;
+    convertFromCH();
+  });
+
+  el("btnLinkNow").addEventListener("click", ()=>{
+    setInputsFromNow();
+  });
+
+  // 入力イベント：date/timeは環境により input が発火しづらいので blur/keyup も追加
+  const bind = (node, fn) => {
+    ["input","change","blur","keyup"].forEach(ev => node.addEventListener(ev, fn));
+  };
+  bind(dateJP, convertFromJP);
+  bind(timeJP, convertFromJP);
+  bind(dateCH, convertFromCH);
+  bind(timeCH, convertFromCH);
+
+  // 初期化
+  updateBadgesAndNow();
+  setInputsFromNow();
+  setInterval(updateBadgesAndNow, 250);
+})();
+</script>
+</body>
+</html>
